@@ -46,3 +46,7 @@ install. Before enabling both services, prove that an unauthenticated client
 cannot forward traffic and that restarting `create_ap` cannot insert a
 first-in-chain bypass rule. Keep a rollback terminal available and do not
 enable the service at boot until that test passes.
+
+For modern phones, apply `patches/create-ap-dhcp-option-114.patch` to the
+WiHotspot `create_ap` script as well. It advertises the portal URL via DHCP
+option 114; HTTP interception remains enabled as a fallback for older clients.

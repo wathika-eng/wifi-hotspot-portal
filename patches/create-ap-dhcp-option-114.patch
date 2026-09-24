@@ -1,0 +1,6 @@
+--- a/src/scripts/create_ap
++++ b/src/scripts/create_ap
+@@
+     dhcp-option-force=option:dns-server,${DHCP_DNS}
++    # RFC 8910 Captive Portal Identification for modern clients
++    dhcp-option-force=114,"http://${GATEWAY}:2050/"
