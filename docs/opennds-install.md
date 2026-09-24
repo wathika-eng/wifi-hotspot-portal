@@ -36,6 +36,10 @@ gateway `192.168.12.1` when the hotspot is created. The active host currently
 has `wlan0` in managed mode at `192.168.1.147`, so openNDS must remain stopped
 until the AP interface exists.
 
+On a generic Linux host, WiHotspot owns a private dnsmasq process for `ap0`.
+Set `fwhook_enabled` to `0` in `/etc/config/opennds` so openNDS does not try to
+reload the unrelated system `dnsmasq.service` during firewall updates.
+
 ## Firewall ownership
 
 `create_ap` currently creates its own DHCP/DNS/NAT and iptables rules. The
@@ -50,3 +54,12 @@ enable the service at boot until that test passes.
 For modern phones, apply `patches/create-ap-dhcp-option-114.patch` to the
 WiHotspot `create_ap` script as well. It advertises the portal URL via DHCP
 option 114; HTTP interception remains enabled as a fallback for older clients.
+
+The repository also includes `systemd/opennds.service`. It runs openNDS in the
+foreground so systemd tracks the actual process and restarts do not leave a
+stale background child:
+
+```bash
+sudo install -m 0644 systemd/opennds.service /etc/systemd/system/opennds.service
+sudo systemctl daemon-reload
+```
