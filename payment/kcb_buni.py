@@ -48,7 +48,7 @@ def access_token():
     return token
 
 
-def stk_push(phone_number, amount, invoice_number, callback_url, description="WiHotspot access"):
+def stk_push(phone_number, amount, invoice_number, callback_url, description="WiHotspot access", message_id=None):
     token = access_token()
     payload = {
         "phoneNumber": phone_number,
@@ -70,7 +70,7 @@ def stk_push(phone_number, amount, invoice_number, callback_url, description="Wi
             "Authorization": f"Bearer {token}",
             "routeCode": ROUTE_CODE,
             "operation": OPERATION,
-            "messageId": invoice_number,
+            "messageId": message_id or invoice_number,
         },
         method="POST",
     )

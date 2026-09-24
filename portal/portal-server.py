@@ -130,10 +130,12 @@ class PortalHandler(BaseHTTPRequestHandler):
             if not amount.isdigit() or int(amount) < 1:
                 self.send_error(400, "Enter a valid amount")
                 return
-            invoice = f"{os.environ.get('KCB_BUNI_TILL_NUMBER', 'WIFI')}-{uuid4().hex[:12]}"
+            reference = uuid4().hex[:12]
+            invoice = f"{os.environ.get('KCB_BUNI_TILL_NUMBER', 'WIFI')}-{reference}"
+            message_id = f"WIFI_KCBOrg_{reference}"
             callback = os.environ.get("KCB_BUNI_CALLBACK_URL", f"{PUBLIC_URL}/payment/kcb/callback")
             try:
-                response = stk_push(phone, amount, invoice, callback)
+                response = stk_push(phone, amount, invoice, callback, message_id=message_id)
             except KCBError as exc:
                 detail = str(exc)
                 body = f"""<!doctype html><meta name="viewport" content="width=device-width"><title>Payment unavailable</title><style>body{{font:16px system-ui,-apple-system,sans-serif;background:#f2f2f7;color:#1c1c1e;margin:0;padding:18vh 20px}}main{{max-width:420px;margin:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 24px #0001}}h1{{font-size:1.5rem}}p{{line-height:1.5;color:#6e6e73}}a{{display:block;text-align:center;background:#007aff;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700}}small{{display:block;margin-top:18px;color:#8e8e93}}</style><main><h1>Payment could not start</h1><p>KCB did not accept the checkout request. Your phone was not charged. Check the number and try again.</p><a href="/portal">Back to passes</a><small>Reference: {invoice}</small></main>""".encode()
