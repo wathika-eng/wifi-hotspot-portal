@@ -65,6 +65,7 @@ def stk_push(phone_number, amount, invoice_number, callback_url, description="Wi
         data=json.dumps(payload).encode(),
         headers={
             "Accept": "application/json",
+            "Access-Control-Allow-Origin": "*",
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
             "routeCode": ROUTE_CODE,
