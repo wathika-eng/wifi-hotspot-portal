@@ -222,9 +222,29 @@ combines the current dnsmasq lease file with `ndsctl json` and supports:
 - trusting a device for a manual test; and
 - revoking a trusted device.
 
+The console also has live refresh, client search, explicit disconnect, and
+openNDS native session/rate/quota controls. Rate controls apply to an active
+openNDS-authenticated session; permanently trusted devices bypass accounting.
+
 Time limits, payment records, historical sessions and reporting are not yet
 implemented. They require persistent storage and a session-expiry worker;
 `ndsctl trust` is deliberately only an MVP bridge.
+
+## Pending production work
+
+1. Add a persistent database for plans, payment intents, callbacks, sessions,
+   audit events and operator accounts.
+2. Implement KCB Buni token acquisition and STK Push using the UAT paths in
+   `.env`, then verify callback signatures/references, amount and phone number
+   before authorizing access.
+3. Replace persistent trust with bounded `ndsctl auth` sessions and an expiry
+   worker; retain upload/download limits and quota usage in the database.
+4. Add real admin authentication, CSRF protection, audit logging and a private
+   Tailscale Serve deployment before exposing operator actions to a team.
+5. Add multi-device identity handling, randomized-MAC caveats, retries,
+   idempotency keys and reconciliation for interrupted KCB payments.
+6. Add automated integration tests for Android CAPPORT behavior, openNDS
+   authorization, KCB callbacks and restart/recovery scenarios.
 
 ## Portability notes
 
