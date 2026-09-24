@@ -1,13 +1,13 @@
 [Unit]
-Description=WiHotspot captive portal landing page for Tailscale Funnel
-After=network.target
-Wants=network-online.target
+Description=WiHotspot private operator console
+After=network.target opennds.service
+Requires=opennds.service
 
 [Service]
 Type=simple
 WorkingDirectory=/home/wathi/wifi-hotspot-portal
 EnvironmentFile=-/home/wathi/wifi-hotspot-portal/.env
-ExecStart=/usr/bin/python3 /home/wathi/wifi-hotspot-portal/portal/portal-server.py
+ExecStart=/usr/bin/python3 /home/wathi/wifi-hotspot-portal/admin/admin-server.py
 Restart=on-failure
 RestartSec=2
 
