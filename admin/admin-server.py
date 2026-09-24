@@ -39,14 +39,20 @@ def clients():
         nds = {"clients": {}, "client_list_length": "0", "trusted": []}
     current_leases = leases()
     rows = []
+    seen = set()
     for key, value in nds.get("clients", {}).items():
         item = value if isinstance(value, dict) else {"id": key}
         mac = str(item.get("mac", key)).lower()
+        seen.add(mac)
         rows.append({**item, **current_leases.get(mac, {}), "state": "authenticated"})
     trusted = {str(mac).lower() for mac in nds.get("trusted", [])}
     for mac in trusted:
         if not any(row.get("mac", "").lower() == mac for row in rows):
+            seen.add(mac)
             rows.append({**current_leases.get(mac, {"mac": mac}), "state": "trusted"})
+    for mac, lease in current_leases.items():
+        if mac not in seen:
+            rows.append({**lease, "state": "connected"})
     return rows
 
 
@@ -90,7 +96,30 @@ class AdminHandler(BaseHTTPRequestHandler):
             return
         mac = unquote(parts[3])
         action = parts[4]
-        if action not in {"trust", "untrust"}:
+        if action == "auth":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                payload = json.loads(self.rfile.read(length) or b"{}")
+                values = [
+                    str(int(payload.get("sessiontimeout", 0))),
+                    str(int(payload.get("uploadrate", 0))),
+                    str(int(payload.get("downloadrate", 0))),
+                    str(int(payload.get("uploadquota", 0))),
+                    str(int(payload.get("downloadquota", 0))),
+                    str(payload.get("custom", "admin-console"))[:120],
+                ]
+                if any(int(value) < 0 for value in values[:5]):
+                    raise ValueError("limits must be non-negative")
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                self.send_json({"error": f"invalid limits: {exc}"}, 400)
+                return
+            code, stdout, stderr = command("/usr/bin/ndsctl", "auth", mac, *values)
+            if code != 0:
+                self.send_json({"error": stderr.strip() or stdout.strip() or "openNDS authorization failed"}, 502)
+                return
+            self.send_json({"ok": True, "mac": mac, "action": action, "limits": payload})
+            return
+        if action not in {"trust", "untrust", "deauth"}:
             self.send_json({"error": "unsupported action"}, 400)
             return
         code, stdout, stderr = command("/usr/bin/ndsctl", action, mac)
@@ -123,11 +152,12 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:14px 16p
 <main><section class="top"><div><p class="eyebrow">OPERATOR CONSOLE</p><h1>Who is on your Wi-Fi?</h1><p class="note">Live view of the hotspot leases and openNDS access state. This console is for the operator, not hotspot guests.</p></div><button class="secondary" onclick="load()">Refresh</button></section>
 <section class="stats"><div class="stat"><b id="total">—</b><span>visible clients</span></div><div class="stat"><b id="auth">—</b><span>authenticated</span></div><div class="stat"><b id="trusted">—</b><span>trusted devices</span></div></section>
 <div class="toolbar"><input id="token" type="password" placeholder="Admin token (if configured)" autocomplete="current-password"><button onclick="load()">Load clients</button></div>
-<div class="table-wrap"><table><thead><tr><th>Device</th><th>Address</th><th>State</th><th>Session</th><th>Action</th></tr></thead><tbody id="rows"><tr><td colspan="5" class="empty">Enter the admin token and load the console.</td></tr></tbody></table></div>
-<p class="note">MVP note: trusted-device access is currently persistent. Payment-backed session expiry will replace this with time-limited openNDS authorization.</p></main>
+<div class="table-wrap"><table><thead><tr><th>Device</th><th>Address</th><th>State</th><th>Session / traffic</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="5" class="empty">Enter the admin token and load the console.</td></tr></tbody></table></div>
+<p class="note">Limits use openNDS native controls: minutes, upload/download kb/s, and upload/download quota in kB. A trusted device bypasses accounting; use timed authorization for throttling.</p></main>
 <script>
-async function load(){const token=document.querySelector('#token').value;const r=await fetch('/api/clients',{headers:token?{Authorization:'Bearer '+token}:{}});const data=await r.json();if(!r.ok){document.querySelector('#rows').innerHTML='<tr><td colspan="5" class="empty">'+(data.error||'Unable to load clients')+'</td></tr>';return}const list=data.clients||[];document.querySelector('#total').textContent=list.length;document.querySelector('#auth').textContent=list.filter(x=>x.state==='authenticated').length;document.querySelector('#trusted').textContent=list.filter(x=>x.state==='trusted').length;document.querySelector('#rows').innerHTML=list.length?list.map(x=>`<tr><td>${x.hostname||'Unknown'}<small>${x.mac||''}</small></td><td>${x.ip||'—'}</td><td><span class="badge ${x.state==='trusted'?'warn':''}">${x.state}</span></td><td>${x.sessiontimeout||'—'}</td><td><button class="secondary" onclick="act('${x.mac}','${x.state==='trusted'?'untrust':'trust'}')">${x.state==='trusted'?'Revoke':'Trust'}</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">No clients yet.</td></tr>'}
-async function act(mac,action){const token=document.querySelector('#token').value;await fetch('/api/clients/'+encodeURIComponent(mac)+'/'+action,{method:'POST',headers:token?{Authorization:'Bearer '+token}:{}});load()} 
+async function load(){const token=document.querySelector('#token').value;const r=await fetch('/api/clients',{headers:token?{Authorization:'Bearer '+token}:{}});const data=await r.json();if(!r.ok){document.querySelector('#rows').innerHTML='<tr><td colspan="5" class="empty">'+(data.error||'Unable to load clients')+'</td></tr>';return}const list=data.clients||[];document.querySelector('#total').textContent=list.length;document.querySelector('#auth').textContent=list.filter(x=>x.state==='authenticated').length;document.querySelector('#trusted').textContent=list.filter(x=>x.state==='trusted').length;document.querySelector('#rows').innerHTML=list.length?list.map(x=>`<tr><td>${x.hostname||'Unknown'}<small>${x.mac||''}</small></td><td>${x.ip||'—'}</td><td><span class="badge ${x.state==='trusted'?'warn':''}">${x.state}</span></td><td><b>${x.sessiontimeout||'—'} min</b><small>up ${x.uploadrate||0} / down ${x.downloadrate||0} kb/s<br>used ${x.uploadused||0} / ${x.downloadused||0} kB</small></td><td><button class="secondary" onclick="act('${x.mac}','${x.state==='trusted'?'untrust':'trust'}')">${x.state==='trusted'?'Revoke':'Trust'}</button><button class="secondary" onclick="limits('${x.mac}')">Set limits</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">No clients yet.</td></tr>'}
+async function act(mac,action){const token=document.querySelector('#token').value;await fetch('/api/clients/'+encodeURIComponent(mac)+'/'+action,{method:'POST',headers:token?{Authorization:'Bearer '+token}:{}});load()}
+async function limits(mac){const sessiontimeout=prompt('Session minutes (0 = unlimited):','60');if(sessiontimeout===null)return;const uploadrate=prompt('Upload kb/s (0 = unlimited):','512');if(uploadrate===null)return;const downloadrate=prompt('Download kb/s (0 = unlimited):','2048');if(downloadrate===null)return;const token=document.querySelector('#token').value;const headers={'Content-Type':'application/json'};if(token)headers.Authorization='Bearer '+token;const r=await fetch('/api/clients/'+encodeURIComponent(mac)+'/auth',{method:'POST',headers,body:JSON.stringify({sessiontimeout,uploadrate,downloadrate,uploadquota:0,downloadquota:0,custom:'admin-console'})});if(!r.ok)alert((await r.json()).error||'Unable to set limits');load()}
 </script></html>'''
 
 

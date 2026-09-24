@@ -25,6 +25,32 @@ def connected_client():
             return fields[1], fields[2]
     return None
 
+
+def captive_for_connected_clients():
+    """Return false once every current DHCP lease is trusted by openNDS.
+
+    Funnel does not preserve the phone's hotspot IP, so the CAPPORT endpoint
+    cannot make a per-device decision. For this MVP, the safe useful behavior
+    is captive while any current lease is untrusted and non-captive when all
+    current leases are trusted.
+    """
+    leases = sorted(LEASE_ROOT.glob("create_ap.*/dnsmasq.leases"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not leases:
+        return True
+    macs = set()
+    for row in leases[0].read_text().splitlines():
+        fields = row.split()
+        if len(fields) >= 3:
+            macs.add(fields[1].lower())
+    if not macs:
+        return True
+    result = subprocess.run(["/usr/bin/ndsctl", "json"], capture_output=True, text=True, check=False)
+    try:
+        trusted = {str(mac).lower() for mac in json.loads(result.stdout).get("trusted", [])}
+    except json.JSONDecodeError:
+        return True
+    return not macs.issubset(trusted)
+
 class PortalHandler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802 - stdlib handler API
         if self.path.startswith("/healthz"):
@@ -36,7 +62,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         if self.path in ("/", "/capport"):
             origin = os.environ.get("PORTAL_PUBLIC_URL", "https://wathi.tail433a8c.ts.net")
             body = json.dumps({
-                "captive": True,
+                "captive": captive_for_connected_clients(),
                 "user-portal-url": f"{origin}/portal",
                 "venue-info-url": f"{origin}/portal",
             }).encode()
