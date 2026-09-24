@@ -10,7 +10,8 @@ another Linux laptop and configured with local environment values.
 - openNDS intercepts unauthenticated clients on `ap0`.
 - Android captive-portal detection receives an RFC 8908 response and opens the
   portal in the system captive-login window.
-- The portal can activate a client by calling `ndsctl trust` (MVP/mock access).
+- The portal can initiate KCB Buni STK Push and authorize a client after a
+  successful callback; `/activate` remains as a local MVP test path.
 - Tailscale Funnel publishes only the guest portal.
 - A private operator console shows leases and openNDS state and can trust or
   revoke a device.
@@ -208,8 +209,7 @@ credential that has been used outside the KCB portal. Sandbox onboarding is at
 `https://sandbox.buni.kcbgroup.com/devportal/apis`. Production access requires
 the Buni onboarding/request-letter process described by KCB.
 
-The repository currently does not call KCB. Payment code should be added only
-after deciding the product price and session duration, then implement this
+When the KCB credentials are configured, the portal implements this MVP
 transaction boundary:
 
 ```text
