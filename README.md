@@ -166,7 +166,8 @@ adb logcat -v brief | rg -i 'CaptivePortal|NetworkMonitor|ConnectivityService'
 The selected provider is KCB Buni's M-Pesa Express/STK Push API. The supplied
 specification and Postman collection describe:
 
-- OAuth client-credentials token: `POST https://uat.buni.kcbgroup.com/token?grant_type=client_credentials`
+- OAuth client-credentials token: `POST https://accounts.buni.kcbgroup.com/oauth2/token`
+- OAuth revoke endpoint: `POST https://accounts.buni.kcbgroup.com/oauth2/revoke`
 - STK Push: `POST https://uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush`
 - Basic authentication for the token request using the Buni consumer key and
   consumer secret.
@@ -183,6 +184,8 @@ Fill the KCB variables in the untracked `.env` only:
 ```dotenv
 PAYMENT_PROVIDER=kcb-buni
 KCB_BUNI_API_BASE_URL=https://uat.buni.kcbgroup.com
+KCB_BUNI_TOKEN_URL=https://accounts.buni.kcbgroup.com/oauth2/token
+KCB_BUNI_REVOKE_URL=https://accounts.buni.kcbgroup.com/oauth2/revoke
 KCB_BUNI_CONSUMER_KEY=...
 KCB_BUNI_CONSUMER_SECRET=...
 KCB_BUNI_API_KEY=...
@@ -190,6 +193,13 @@ KCB_BUNI_TILL_NUMBER=...
 KCB_BUNI_CALLBACK_URL=https://YOUR-PORTAL-HOST/payment/kcb/callback
 KCB_BUNI_WEBHOOK_SECRET=...
 ```
+
+The configured application lifetime is 3600 seconds for access tokens and
+86400 seconds for refresh tokens. For this server-side hotspot integration,
+use the client-credentials grant and never use a browser callback or PKCE for
+the payment API itself. The callback URL shown in the Buni console should be
+the exact HTTPS Funnel callback URL above; do not use the console's example
+`http://url-to-webapp` value.
 
 Do not paste consumer secrets, bearer tokens, certificates, or the Postman
 collection's sample token into GitHub or chat. The collection/specification
