@@ -82,7 +82,7 @@ p{{line-height:1.5;color:#444}}</style>
         if result.returncode != 0:
             self.send_error(502, result.stderr.strip() or "openNDS authorization failed")
             return
-        body = b"<!doctype html><meta name=viewport content=width=device-width><h1>Wi-Fi activated</h1><p>You can now use the internet for 60 minutes.</p>"
+        body = b"<!doctype html><meta name=viewport content=width=device-width><h1>Wi-Fi activated</h1><p>MVP access is enabled. Payment is not connected yet.</p>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
