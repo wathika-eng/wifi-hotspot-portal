@@ -130,7 +130,7 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path == "/payment/kcb/callback":
+        if self.path in ("/ipn", "/payment/kcb/callback"):
             length = int(self.headers.get("Content-Length", "0"))
             try:
                 payload = json.loads(self.rfile.read(length) or b"{}")
