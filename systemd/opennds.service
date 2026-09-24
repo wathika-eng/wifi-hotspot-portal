@@ -1,7 +1,7 @@
 [Unit]
 Description=openNDS Captive Portal
-After=network.target create_ap.service
-Requires=create_ap.service
+After=network.target create_ap.service hotspot-firewall.service
+Requires=create_ap.service hotspot-firewall.service
 StartLimitIntervalSec=10
 StartLimitBurst=10
 

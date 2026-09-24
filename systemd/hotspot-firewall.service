@@ -1,0 +1,13 @@
+[Unit]
+Description=WiHotspot firewall allowances for openNDS and Tailscale Funnel
+After=create_ap.service
+Requires=create_ap.service
+Before=opennds.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/wathi/wifi-hotspot-portal/scripts/ensure-hotspot-firewall.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

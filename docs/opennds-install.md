@@ -42,8 +42,9 @@ reload the unrelated system `dnsmasq.service` during firewall updates.
 Because this dnsmasq instance listens on port `5353` and WiHotspot redirects
 client DNS from port `53`, allow both UDP and TCP `5353` in the openNDS
 `users_to_router` rules.
-The Funnel node and its public relay addresses must also be walled-gardened
-before authentication; keep these addresses synchronized with public DNS.
+The hotspot DNS must resolve the Funnel hostname to the local Tailscale node
+address (`100.85.186.27`) and the host firewall must allow hotspot TCP/443 to
+that address before authentication.
 
 ## Firewall ownership
 
@@ -73,3 +74,7 @@ For Android's modern captive-portal API, use the trusted HTTPS Funnel landing
 page. Install and start `systemd/portal-funnel.service`, configure Tailscale
 Funnel to proxy `http://127.0.0.1:8080`, and set `CAPTIVE_PORTAL_URL` in the
 WiHotspot environment to the resulting `https://<node>.ts.net/` URL.
+The Funnel root must serve RFC 8908 `application/captive+json`; the human
+landing page belongs at the JSON document's `user-portal-url` path.
+Install `systemd/hotspot-firewall.service` as well; it persists the narrow
+`ap0`/openNDS/Funnel firewall allowances across WiHotspot restarts.

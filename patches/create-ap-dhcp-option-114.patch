@@ -10,4 +10,4 @@
      dhcp-option-force=option:dns-server,${DHCP_DNS}
 +    # RFC 8910 Captive Portal Identification for modern clients
 +    dhcp-option-force=114,"${CAPTIVE_PORTAL_URL}"
-+    server=/tail433a8c.ts.net/1.1.1.1
++    address=/wathi.tail433a8c.ts.net/100.85.186.27
