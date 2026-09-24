@@ -88,9 +88,10 @@ p{{line-height:1.5;color:#444}}</style>
         if result is not None and result.returncode != 0:
             self.send_error(502, result.stderr.strip() or "openNDS authorization failed")
             return
-        body = b"<!doctype html><meta name=viewport content=width=device-width><h1>Wi-Fi activated</h1><p>MVP access is enabled. Payment is not connected yet.</p>"
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        body = b"Wi-Fi activated"
+        self.send_response(302)
+        self.send_header("Location", "http://connectivitycheck.gstatic.com/generate_204")
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
