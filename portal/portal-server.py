@@ -21,6 +21,19 @@ PUBLIC_URL = os.environ.get("PORTAL_PUBLIC_URL", "https://wathi.tail433a8c.ts.ne
 PAYMENTS = {}
 
 
+def normalize_phone(value):
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if digits.startswith("0") and len(digits) == 10:
+        digits = "254" + digits[1:]
+    if len(digits) == 9 and digits.startswith(("7", "1")):
+        digits = "254" + digits
+    if len(digits) != 12 or not digits.startswith("254") or digits[3] not in "17":
+        raise ValueError("Use a Kenyan mobile number such as 0712 345 678")
+    return digits
+
+
 def connected_client():
     leases = sorted(LEASE_ROOT.glob("create_ap.*/dnsmasq.leases"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not leases:
@@ -107,17 +120,30 @@ class PortalHandler(BaseHTTPRequestHandler):
         if self.path == "/pay":
             length = int(self.headers.get("Content-Length", "0"))
             fields = parse_qs(self.rfile.read(length).decode())
-            phone = fields.get("phoneNumber", [""])[0].strip()
+            raw_phone = fields.get("phoneNumber", [""])[0].strip()
             amount = fields.get("amount", [""])[0].strip()
-            if not phone or not amount.isdigit() or int(amount) < 1:
-                self.send_error(400, "Enter a valid phone number and amount")
+            try:
+                phone = normalize_phone(raw_phone)
+            except ValueError as exc:
+                self.send_error(400, str(exc))
+                return
+            if not amount.isdigit() or int(amount) < 1:
+                self.send_error(400, "Enter a valid amount")
                 return
             invoice = f"{os.environ.get('KCB_BUNI_TILL_NUMBER', 'WIFI')}-{uuid4().hex[:12]}"
             callback = os.environ.get("KCB_BUNI_CALLBACK_URL", f"{PUBLIC_URL}/payment/kcb/callback")
             try:
                 response = stk_push(phone, amount, invoice, callback)
             except KCBError as exc:
-                self.send_error(502, str(exc))
+                detail = str(exc)
+                body = f"""<!doctype html><meta name="viewport" content="width=device-width"><title>Payment unavailable</title><style>body{{font:16px system-ui,-apple-system,sans-serif;background:#f2f2f7;color:#1c1c1e;margin:0;padding:18vh 20px}}main{{max-width:420px;margin:auto;background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 24px #0001}}h1{{font-size:1.5rem}}p{{line-height:1.5;color:#6e6e73}}a{{display:block;text-align:center;background:#007aff;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700}}small{{display:block;margin-top:18px;color:#8e8e93}}</style><main><h1>Payment could not start</h1><p>KCB did not accept the checkout request. Your phone was not charged. Check the number and try again.</p><a href="/portal">Back to passes</a><small>Reference: {invoice}</small></main>""".encode()
+                self.send_response(502)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                print(f"KCB payment failure invoice={invoice} phone_last4={phone[-4:]} detail={detail}", flush=True)
                 return
             PAYMENTS[invoice] = {"status": "pending", "phone": phone[-4:], "amount": amount, "response": response}
             provider_ref = response.get("response", {}).get("MerchantRequestID") if isinstance(response, dict) else None
