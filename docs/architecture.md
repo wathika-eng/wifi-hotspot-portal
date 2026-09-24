@@ -37,6 +37,28 @@ The portal will expose an internal adapter with these operations:
 Provider-specific code stays behind that boundary, allowing M-Pesa/Daraja,
 Stripe or another provider to be selected without changing the openNDS layer.
 
+## KCB Buni mapping
+
+The selected sandbox integration maps as follows:
+
+```text
+guest phone + plan
+  -> create_payment(plan, MAC/IP, idempotency key)
+  -> POST accounts.buni.kcbgroup.com/oauth2/token
+       Basic(consumer key, consumer secret)
+       grant_type=client_credentials
+  -> POST uat.buni.kcbgroup.com/mm/api/request/1.0.0/stkpush
+       Bearer token + routeCode=207 + operation=STKPush
+       phoneNumber, amount, invoiceNumber, callbackUrl
+  -> HTTPS callback /payment/kcb/callback
+       verify reference, amount, phone, ResultCode and idempotency
+  -> ndsctl auth <client> <minutes> <up kb/s> <down kb/s> ...
+```
+
+The callback is the source of truth. A successful STK request response only
+means that KCB accepted the request for processing; it does not prove that the
+customer paid.
+
 ## Open questions before live payment
 
 - Payment provider and currency.
