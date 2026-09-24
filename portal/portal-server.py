@@ -80,6 +80,12 @@ p{{line-height:1.5;color:#444}}</style>
             check=False,
         )
         if result.returncode != 0:
+            current = subprocess.run(
+                ["/usr/bin/ndsctl", "json"], capture_output=True, text=True, check=False
+            )
+            if client_mac.lower() in current.stdout.lower():
+                result = None
+        if result is not None and result.returncode != 0:
             self.send_error(502, result.stderr.strip() or "openNDS authorization failed")
             return
         body = b"<!doctype html><meta name=viewport content=width=device-width><h1>Wi-Fi activated</h1><p>MVP access is enabled. Payment is not connected yet.</p>"
