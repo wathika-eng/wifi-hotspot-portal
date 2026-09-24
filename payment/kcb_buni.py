@@ -73,5 +73,8 @@ def stk_push(phone_number, amount, invoice_number, callback_url, description="Wi
         },
         method="POST",
     )
+    api_key = os.environ.get("KCB_BUNI_API_KEY", "")
+    if api_key:
+        request.add_header("apikey", api_key)
     _, response = _json_request(request)
     return response
