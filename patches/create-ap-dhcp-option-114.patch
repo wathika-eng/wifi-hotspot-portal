@@ -1,6 +1,13 @@
 --- a/src/scripts/create_ap
 +++ b/src/scripts/create_ap
 @@
+ GATEWAY=192.168.12.1
++CAPTIVE_PORTAL_URL=http://192.168.12.1:2050/
+@@
+ CONFIG_OPTS=(CHANNEL GATEWAY WPA_VERSION ETC_HOSTS DHCP_DNS NO_DNS NO_DNSMASQ HIDDEN MAC_FILTER MAC_FILTER_ACCEPT ISOLATE_CLIENTS
++             CAPTIVE_PORTAL_URL
+@@
      dhcp-option-force=option:dns-server,${DHCP_DNS}
 +    # RFC 8910 Captive Portal Identification for modern clients
-+    dhcp-option-force=114,"http://${GATEWAY}:2050/"
++    dhcp-option-force=114,"${CAPTIVE_PORTAL_URL}"
++    server=/tail433a8c.ts.net/1.1.1.1

@@ -1,0 +1,14 @@
+[Unit]
+Description=WiHotspot captive portal landing page for Tailscale Funnel
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/wathi/wifi-hotspot-portal
+Environment=PORTAL_GATEWAY_URL=http://192.168.12.1:2050/
+ExecStart=/usr/bin/python3 /home/wathi/wifi-hotspot-portal/portal/portal-server.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
