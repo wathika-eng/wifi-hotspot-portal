@@ -1,0 +1,16 @@
+--- a/forward_authentication_service/libs/libopennds.sh
++++ b/forward_authentication_service/libs/libopennds.sh
+@@
+-		#Check if interface is wireless - if it is, exit
+-		wireless_status=$(iw dev "$ifname" "info" &> /dev/null; echo -n $?)
+-
+-		if [ "$wireless_status" -eq 0 ]; then
+-			gw_ip="error"
+-			error_code=1
+-			syslogmessage="Interface [ $ifname ] - Use of a wireless interface as gatewayinterface is forbidden. Configure a BRIDGE instead."
+-			debugtype="err"
+-			write_to_syslog
+-		fi
++		# WiHotspot/create_ap exposes the client network as a wireless AP
++		# interface (for example ap0) while NATing through a managed WAN.
++		# This deployment intentionally uses the isolated AP/NAT interface.

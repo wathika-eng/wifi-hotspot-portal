@@ -38,8 +38,11 @@ until the AP interface exists.
 
 ## Firewall ownership
 
-`create_ap` currently creates its own DHCP/DNS/NAT and iptables rules. openNDS
-v11 uses nftables. Before enabling both services, prove that an unauthenticated
-client cannot forward traffic and that restarting `create_ap` cannot insert a
+`create_ap` currently creates its own DHCP/DNS/NAT and iptables rules. The
+generic-Linux openNDS helper also rejects wireless interfaces by default. This
+repository carries `patches/opennds-allow-wifi-ap.patch` for the tested
+WiHotspot NAT topology; it must be applied and rebuilt when reproducing the
+install. Before enabling both services, prove that an unauthenticated client
+cannot forward traffic and that restarting `create_ap` cannot insert a
 first-in-chain bypass rule. Keep a rollback terminal available and do not
 enable the service at boot until that test passes.
